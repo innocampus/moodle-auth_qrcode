@@ -37,7 +37,6 @@ $PAGE->set_heading(get_string('pluginname', 'auth_qrcode'));
 
 echo $OUTPUT->header();
 
-
 $logo = $OUTPUT->get_logo_url();
 if ($logo) {
     echo html_writer::start_tag('div', ['id' => 'loginlogo', 'class' => 'd-flex justify-content-center mb-4']);
@@ -67,7 +66,7 @@ echo html_writer::tag('div', get_string('qrcode_instructions', 'auth_qrcode'), [
 
 // Back to login.
 echo html_writer::tag('a', 'Return to Login', [
-    'href' => new moodle_url('/')->out(),
+    'href' => (new moodle_url('/'))->out(),
     'class' => 'btn btn-secondary w-100',
 ]);
 
