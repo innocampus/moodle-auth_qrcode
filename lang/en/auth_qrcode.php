@@ -40,3 +40,4 @@ $string['instruction_1'] = 'Open a camera app on your smartphone, which is able 
 $string['instruction_2'] = 'Scan the code.';
 $string['instruction_3'] = 'Follow the instructions on your smartphone and confirm the login.';
 $string['login_rejected'] = 'Your login was rejected';
+$string['task:cleanup_expired_qrcode'] = 'Cleanup expired QR login records';

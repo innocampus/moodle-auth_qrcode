@@ -1,0 +1,47 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace auth_qrcode\task;
+
+use auth_qrcode\db\model\qrcode;
+
+/**
+ *
+ * @package    auth_qrcode
+ * @copyright  2026 Stefan Dani, Fernfachhochschule Schweiz (FFHS) <stefan.dani@ffhs.ch>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class cleanup_exipred_qrcode extends \core\task\scheduled_task {
+
+    /**
+     * Name of task
+     *
+     * @return string
+     */
+    public function get_name() {
+        return get_string('task:cleanup_expired_qrcode', 'auth_qrcode');
+    }
+
+    /**
+     * Execute the task.
+     *
+     * @throws \dml_exception
+     * @throws \moodle_exception
+     */
+    public function execute() {
+        qrcode::delete_expired();
+    }
+}

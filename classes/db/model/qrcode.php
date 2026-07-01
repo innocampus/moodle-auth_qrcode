@@ -214,11 +214,13 @@ class qrcode extends persistent {
     /**
      * Delete expired records.
      *
+     * @param int|null $timestamp The timestamp to compare against. If null, current time is used.
      * @return void
      */
-    public static function delete_expired(): void {
+    public static function delete_expired(?int $timestamp = null): void {
         global $DB;
-        $DB->delete_records_select(self::TABLE, 'timeexpires < ?', [time()]);
+        $timestamp = $timestamp ?? time();
+        $DB->delete_records_select(self::TABLE, 'timeexpires < ?', [$timestamp]);
         mtrace("Expired QR login records deleted.");
     }
 
