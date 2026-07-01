@@ -29,17 +29,17 @@
     </div>
     <div class="qrcode-instructions mb-3 text-left">
         <ol>
-            <li>{{qrcode_instructions1}}</li>
-            <li>{{qrcode_instructions2}}</li>
-            <li>{{qrcode_instructions3}}</li>
+            <li>{{#str}}qrcode_instructions1, auth_qrcode{{/str}}</li>
+            <li>{{#str}}qrcode_instructions2, auth_qrcode{{/str}}</li>
+            <li>{{#str}}qrcode_instructions3, auth_qrcode{{/str}}</li>
         </ol>
     </div>
     <div id="expired-container" class="text-center mb-3 hidden">
-        <p>get_string('qrcode_expired', 'auth_qrcode')</p>
-        <a href="/auth/qrcode/login.php" class="btn btn-primary w-75">get_string('get_new_qrcode', 'auth_qrcode')</a>
+        <p>{{#str}}qrcode_expired, auth_qrcode{{/str}}</p>
+        <a href="/auth/qrcode/login.php" class="btn btn-primary w-75">{{#str}}get_new_qrcode, auth_qrcode{{/str}}</a>
     </div>
     <div id="rejected-container" class="text-center mb-5 hidden">
-        <p>get_string('login_rejected', 'auth_qrcode')</p>
+        <p>{{#str}}login_rejected, auth_qrcode{{/str}}</p>
     </div>
     <div class="text-center">
         <a href="/login/" class="btn btn-secondary w-75">Back to Login</a>
