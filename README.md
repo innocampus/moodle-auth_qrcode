@@ -1,8 +1,24 @@
-# Login via QR #
+# 🚀 Login via QR #
 
-TO-DO Describe the plugin shortly here.
+### 😩 Ever tried typing your password on...
 
-TO-DO Provide more detailed description here.
+* 📺 a giant smartboard?
+* 🎓 a classroom PC with a sticky keyboard?
+* 🖥️ a public computer lab?
+* 📡 a Raspberry Pi connected to a TV? (For whatever reason you wanna login to Moodle...)
+* 😵 a keyboard where **Caps Lock** has a personality of its own?
+
+If your answer is **"Unfortunately, yes."**, this plugin is for you.
+
+Simply open the login page, scan the QR code with a device that's already signed in (usually your phone 📱), approve the login, and you're in.
+
+No typing.
+No forgotten passwords.
+No "Is it my username or my email?"
+
+Just **Scan → Confirm → Login.** 🎉
+
+---
 
 ## Installing via uploaded ZIP file ##
 
@@ -29,7 +45,7 @@ to complete the installation from the command line.
 
 ## License ##
 
-2025 Your Name <you@example.com>
+2026 MoodleMootDACH
 
 This program is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
