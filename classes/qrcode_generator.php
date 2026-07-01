@@ -41,8 +41,8 @@ class qrcode_generator {
      */
     public static function generate_qrcode(string $uri = ''): string {
         $qrcode = new  \TCPDF2DBarcode($uri, 'QRCODE');
-        $image = $qrcode->getBarcodePngData(20, 20);
-        $html = \html_writer::img('data:image/png;base64,' . base64_encode($image), '', ['width' => '70%']);
+        $image = $qrcode->getBarcodeSVGcode(20, 20);
+        $html = \html_writer::img('data:image/svg+xml;base64,' . base64_encode($image), '', ['width' => '70%']);
         return $html;
     }
 }
