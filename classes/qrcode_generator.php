@@ -27,7 +27,7 @@ namespace auth_qrcode;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir.'/tcpdf/tcpdf_barcodes_2d.php');
+require_once($CFG->libdir . '/tcpdf/tcpdf_barcodes_2d.php');
 
 /**
  * qrcode generator class.
