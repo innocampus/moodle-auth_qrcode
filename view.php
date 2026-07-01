@@ -66,24 +66,8 @@ if (!$tokeninfo) {
     exit;
 }
 
-// Confirmation message.
-echo html_writer::tag('div', get_string('confirmation', 'auth_qrcode'), ['class' => 'confirmation-message mt-3 mb-3']);
-echo html_writer::start_tag('ul', ['class' => 'token-info']);
-echo html_writer::tag('li', get_string('ip', 'auth_qrcode') . ':' . $tokeninfo['ip']);
-echo html_writer::tag('li', get_string('os', 'auth_qrcode') . ':' . $tokeninfo['os']);
-echo html_writer::tag('li', get_string('browser', 'auth_qrcode') . ':' . $tokeninfo['browser']);
-echo html_writer::end_tag('ul');
+$tokeninfo["yes_url"] = new moodle_url('/auth/qrcode/view.php', ['token' => $token, 'allow' => 1]);
+$tokeninfo["no_url"] = new moodle_url('/auth/qrcode/view.php', ['token' => $token, 'deny' => 1]);
 
-// Confirmation buttons.
-echo html_writer::start_tag('div', ['class' => 'confirmation-buttons']);
-echo html_writer::tag('a', get_string('yes', 'core'), [
-    'href' => new moodle_url('/auth/qrcode/view.php', ['token' => $token, 'allow' => 1]),
-    'class' => 'btn btn-primary w-50 mb-3 me-3',
-]);
-echo html_writer::tag('a', get_string('no', 'core'), [
-    'href' => new moodle_url('/auth/qrcode/view.php', ['token' => $token, 'deny' => 1]),
-    'class' => 'btn btn-secondary w-50 mb-3 me-3',
-]);
-echo html_writer::end_tag('div');
-
+echo $OUTPUT->render_from_template('auth_qrcode/confirmation', $tokeninfo);
 echo $OUTPUT->footer();

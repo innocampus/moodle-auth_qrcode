@@ -15,3 +15,7 @@
 .qrcode-blured {
     filter: blur(10px);
 }
+
+.confirmation-message {
+    font-size: larger;
+}

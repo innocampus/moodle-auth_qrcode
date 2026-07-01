@@ -1,0 +1,33 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template auth_qrcode/login
+}}
+<div class="confirmation-container">
+    <!-- Confirmation message -->
+    <div class="confirmation-message mt-3 mb-3">{{#str}}confirmation, auth_qrcode{{/str}}</div>
+    <ul class="token-info">
+        <li>{{#str}}ip, auth_qrcode{{/str}}: {{ip}}</li>
+        <li>{{#str}}os, auth_qrcode{{/str}}: {{os}}</li>
+        <li>{{#str}}browser, auth_qrcode{{/str}}: {{browser}}</li>
+    </ul>
+    <!-- Confirmation buttons -->
+    <div class="confirmation-buttons text-center">
+        <a href="{{yes_url}}" class="btn btn-primary w-50 mb-3">{{#str}}yes, core{{/str}}</a>
+        <a href="{{no_url}}" class="btn btn-secondary w-50">{{#str}}no, core{{/str}}</a>
+    </div>
+</div>
