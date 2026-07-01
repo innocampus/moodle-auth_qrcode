@@ -24,9 +24,12 @@
 
 use auth_qrcode\qrcode_generator;
 use auth_qrcode\token_creator;
-use moodle_url;
 
 require_once(__DIR__ . '/../../config.php');
+
+if (!is_enabled_auth('qrcode')) {
+    throw new moodle_exception(get_string('pluginisdisabled', 'auth_qrcode'));
+}
 
 if (isloggedin() && !isguestuser()) {
     // Already logged in. Let login page handle it.

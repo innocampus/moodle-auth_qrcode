@@ -26,6 +26,10 @@ require_once(__DIR__ . '/../../config.php');
 
 require_login();
 
+if (!is_enabled_auth('qrcode')) {
+    throw new moodle_exception(get_string('pluginisdisabled', 'auth_qrcode'));
+}
+
 $context = context_system::instance();
 $PAGE->set_context($context);
 
