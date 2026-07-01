@@ -50,10 +50,7 @@ if ($logo) {
 // QR-Code.
 $url = moodle_url::routed_path("auth/qrcode/view.php", ["token" => token_creator::create()]);
 $template_data = [
-    "qrcode_data" => qrcode_generator::generate_qrcode_data($url),
-    "qrcode_instructions1" => get_string('instruction_1', 'auth_qrcode'),
-    "qrcode_instructions2" => get_string('instruction_2', 'auth_qrcode'),
-    "qrcode_instructions3" => get_string('instruction_3', 'auth_qrcode')
+    "qrcode_data" => qrcode_generator::generate_qrcode_data($url)
 ];
 echo $OUTPUT->render_from_template("auth_qrcode/login", $template_data);
 
