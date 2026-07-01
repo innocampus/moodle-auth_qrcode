@@ -18,7 +18,6 @@ namespace auth_qrcode\db\model;
 
 use core\invalid_persistent_exception;
 use core\persistent;
-use core\user;
 
 /**
  * Persistent model representing a QR code login attempt.
@@ -105,7 +104,7 @@ class qrcode extends persistent {
                 return false;
             }
             $existing->set('userid', $userid);
-            $existing->set('status', 'allow_login');
+            $existing->set('status', 'allowed');
             $existing->set('timeexpires', self::calculate_expiry($duration)); // Extend timer.
             $existing->update();
             mtrace("User ID added to token.");
@@ -127,7 +126,9 @@ class qrcode extends persistent {
         ]);
         if ($existing) {
             mtrace("Token denied.");
-            $existing->delete();
+            $existing->set('status', 'denied');
+            $existing->set('timeexpires', self::calculate_expiry(10)); //set expire to 10 seconds.
+            $existing->update();
         }
     }
 
@@ -186,7 +187,7 @@ class qrcode extends persistent {
             if (self::is_record_expired($existing)) {
                 return 'expired';
             }
-            if ($existing->get('status') === 'allow_login') {
+            if ($existing->get('status') === 'allowed') {
                 return $existing->get_user_record();
             }
             if ($existing->get('status') === 'created' || $existing->get('status') === 'in_use') {
