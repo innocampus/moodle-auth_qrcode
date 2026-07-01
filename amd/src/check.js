@@ -28,13 +28,17 @@ export function init() {
  * Ask the server to check the status of the QR code authentication.
  */
 async function checkNow() {
-    const status = await Ajax.call([{
+    const check = await Ajax.call([{
         methodname: 'auth_qrcode_check_login',
         args: {}
     }])[0];
-    window.console.log("QR login status: ", status);
-    if (status.status === 'not_authorized') {
+    if (check.status === 'authorized') {
+        window.location.href = check.wantsurl;
+    } else if (check.status === 'not_authorized') {
         displayRejection();
+    } else if (check.status === 'token_not_found') {
+        clearTimeout(expirationTimer);
+        expireQRCode(0);
     }
 }
 
