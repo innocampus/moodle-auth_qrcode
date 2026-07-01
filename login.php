@@ -26,6 +26,11 @@ use auth_qrcode\qrcode_generator;
 
 require_once(__DIR__ . '/../../config.php');
 
+if (isloggedin() and !isguestuser()) {
+    // Already logged in. Let login page handle it.
+    redirect(new moodle_url('/login/index.php'));
+}
+
 $context = context_system::instance();
 
 $PAGE->set_context($context);
