@@ -19,7 +19,7 @@
  *
  * @package     auth_qrcode
  * @category    string
- * @copyright   2025 Your Name <you@example.com>
+ * @copyright   2026 MoodleMootDACH
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -27,7 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'QR-Code';
 $string['login_via_qrcode'] = 'Log in via QR-Code';
-$string['privacy:metadata'] = 'Your metadata here'; // ToDo: Change me.
+$string['privacy:metadata'] = 'The QR-Code authentication plugin does not store any personal data.';
 $string['qrcode_instructions'] = 'Scan the QR-Code with your mobile device.';
 $string['confirmation'] = 'Do you try to log in to Moodle via QR-Code?';
 $string['token_confirmed'] = 'Login successful. Please switch to the other device.';
