@@ -59,13 +59,11 @@ class qrcode extends persistent {
         ]);
 
         if ($existing) {
-            mtrace("Existing token found.");
             return false;
         }
 
         $sessionid = self::get_session_id($sid);
         if ($sessionid === null) { // Check like this because sessionid could be 0 (zero).
-            mtrace("Session not found for sid");
             return false;
         }
 
@@ -82,7 +80,6 @@ class qrcode extends persistent {
         $record->set('timeexpires', self::calculate_expiry($duration));
         $record->create();
 
-        mtrace("New QR login record created.");
         return $record;
     }
 
@@ -107,7 +104,6 @@ class qrcode extends persistent {
             $existing->set('status', 'allowed');
             $existing->set('timeexpires', self::calculate_expiry($duration)); // Extend timer.
             $existing->update();
-            mtrace("User ID added to token.");
             return $existing;
         }
         return false;
@@ -125,7 +121,6 @@ class qrcode extends persistent {
             'status' => 'in_use'
         ]);
         if ($existing) {
-            mtrace("Token denied.");
             $existing->set('status', 'denied');
             $existing->set('timeexpires', self::calculate_expiry(10)); //set expire to 10 seconds.
             $existing->update();
@@ -176,7 +171,6 @@ class qrcode extends persistent {
     public static function can_user_login(string $token, string $sid): string|\stdClass {
         $sessionid = self::get_session_id($sid);
         if ($sessionid === null) { // Check like this because sessionid could be 0 (zero).
-            mtrace("Session not found for sid");
             return 'expired';
         }
         $existing = self::get_record([
@@ -225,7 +219,6 @@ class qrcode extends persistent {
         global $DB;
         $timestamp = $timestamp ?? time();
         $DB->delete_records_select(self::TABLE, 'timeexpires < ?', [$timestamp]);
-        mtrace("Expired QR login records deleted.");
     }
 
     /**
@@ -258,7 +251,6 @@ class qrcode extends persistent {
      */
     private static function is_record_expired(self $record): bool {
         if ($record->get('timeexpires') < time()) {
-            mtrace("Token expired.");
             $record->delete();
             return true;
         }
