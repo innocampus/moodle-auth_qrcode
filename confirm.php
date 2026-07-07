@@ -33,7 +33,7 @@ if (!is_enabled_auth('qrcode')) {
 $context = context_system::instance();
 $PAGE->set_context($context);
 
-$PAGE->set_url('/auth/qrcode/view.php');
+$PAGE->set_url('/auth/qrcode/confirm.php');
 $PAGE->set_pagelayout('standard');
 $PAGE->set_title(get_string('login_via_qrcode', 'auth_qrcode'));
 $PAGE->set_heading(get_string('login_via_qrcode', 'auth_qrcode'));
@@ -65,9 +65,9 @@ if (!$tokeninfo) {
     echo $OUTPUT->footer();
     exit;
 }
-
-$tokeninfo["yes_url"] = new moodle_url('/auth/qrcode/view.php', ['token' => $token, 'allow' => 1]);
-$tokeninfo["no_url"] = new moodle_url('/auth/qrcode/view.php', ['token' => $token, 'deny' => 1]);
+// else $tokeninfo is an array
+$tokeninfo["yes_url"] = new moodle_url('/auth/qrcode/confirm.php', ['token' => $token, 'allow' => 1]);
+$tokeninfo["no_url"] = new moodle_url('/auth/qrcode/confirm.php', ['token' => $token, 'deny' => 1]);
 
 echo $OUTPUT->render_from_template('auth_qrcode/confirmation', $tokeninfo);
 echo $OUTPUT->footer();

@@ -52,7 +52,7 @@ if ($logo) {
 }
 
 // QR-Code.
-$url = new moodle_url('/auth/qrcode/view.php', ["token" => token_creator::create()]);
+$url = new moodle_url('/auth/qrcode/confirm.php', ["token" => token_creator::create()]);
 $template_data = [
     "qrcode_data" => qrcode_generator::generate_qrcode_data($url)
 ];
