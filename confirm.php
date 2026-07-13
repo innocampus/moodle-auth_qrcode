@@ -24,7 +24,7 @@
 
 require_once(__DIR__ . '/../../config.php');
 
-require_login();
+require_login(autologinguest: false);
 
 if (!is_enabled_auth('qrcode')) {
     throw new moodle_exception(get_string('pluginisdisabled', 'auth_qrcode'));
@@ -41,6 +41,14 @@ $PAGE->set_heading(get_string('login_via_qrcode', 'auth_qrcode'));
 echo $OUTPUT->header();
 
 $token = required_param('token', PARAM_ALPHANUMEXT);
+
+// Check if user is allowed to log in with their primary method.
+if ($USER->auth == 'nologin' || !is_enabled_auth($USER->auth)) {
+    // Suspended accounts will lose their session, no need to check for this explicitly.
+    echo $OUTPUT->notification(get_string('login_rejected', 'auth_qrcode'), 'error', false);
+    echo $OUTPUT->footer();
+    exit;
+}
 
 // Check if the token should be denied.
 if (optional_param('deny', false, PARAM_BOOL)) {
