@@ -35,7 +35,7 @@ class qrcode extends persistent {
     /**
      * {@inheritDoc}
      */
-    const string TABLE = 'auth_qrcode';
+    const TABLE = 'auth_qrcode';
 
     /**
      * Creates a new QR code login record.
