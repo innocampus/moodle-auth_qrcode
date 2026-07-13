@@ -33,7 +33,7 @@ class logged_in extends \core\event\base {
 	 *
 	 * @return string
 	 */
-	public static function get_name() : string {
+	public static function get_name(): string {
 		return "User authenticated via QR code";
 	}
 
@@ -41,7 +41,7 @@ class logged_in extends \core\event\base {
 	 * (non-PHPdoc)
 	 * @see \core\event\base::get_description()
 	 */
-	public function get_description() : string {
+	public function get_description(): string {
 		return "The user with id '$this->userid' logged in via QR code with token '{$this->other['token']}'.";
 	}
 
