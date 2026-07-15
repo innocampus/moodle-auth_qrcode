@@ -24,23 +24,25 @@
 
 require_once(__DIR__ . '/../../config.php');
 
-require_login(autologinguest: false);
+global $PAGE, $OUTPUT, $USER;
 
-if (!is_enabled_auth('qrcode')) {
-    throw new moodle_exception(get_string('pluginisdisabled', 'auth_qrcode'));
-}
+$token = required_param('token', PARAM_ALPHANUM);
 
 $context = context_system::instance();
 $PAGE->set_context($context);
 
-$PAGE->set_url('/auth/qrcode/confirm.php');
+$PAGE->set_url('/auth/qrcode/confirm.php', ['token' => $token]);
 $PAGE->set_pagelayout('standard');
 $PAGE->set_title(get_string('login_via_qrcode', 'auth_qrcode'));
 $PAGE->set_heading(get_string('login_via_qrcode', 'auth_qrcode'));
 
-echo $OUTPUT->header();
+if (!is_enabled_auth('qrcode')) {
+    throw new moodle_exception('pluginisdisabled', 'auth_qrcode');
+}
 
-$token = required_param('token', PARAM_ALPHANUM);
+require_login(autologinguest: false);
+
+echo $OUTPUT->header();
 
 // Check if user is allowed to log in with their primary method.
 if ($USER->auth == 'nologin' || !is_enabled_auth($USER->auth)) {
@@ -68,7 +70,7 @@ if (optional_param('allow', false, PARAM_BOOL)) {
         $event = \auth_qrcode\event\login_authorized::create([
             "userid" => $USER->id,
             "objectid" => $USER->id,
-            "other" => ['token' => $token]
+            "other" => ['token' => $token],
         ]);
         $event->trigger();
     } else {
@@ -79,7 +81,7 @@ if (optional_param('allow', false, PARAM_BOOL)) {
 }
 
 // Check if the token is valid.
-$tokeninfo = \auth_qrcode\db\model\qrcode::get_loginattemp_info($token);
+$tokeninfo = \auth_qrcode\db\model\qrcode::get_loginattempt_info($token);
 if (!$tokeninfo) {
     echo $OUTPUT->notification(get_string('invalid_token', 'auth_qrcode'), 'danger', false);
     echo $OUTPUT->footer();
