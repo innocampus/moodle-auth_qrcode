@@ -18,8 +18,6 @@ namespace auth_qrcode\event;
 
 use context_system;
 
-defined("MOODLE_INTERNAL") || die();
-
 /**
  * Registration base event for module context
  *
