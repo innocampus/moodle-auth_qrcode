@@ -41,6 +41,7 @@ $string['login_cancelled'] = 'Login denied.';
 $string['login_confirmed'] = 'Login confirmed. Please switch to the other device.';
 $string['login_denied'] = 'Login denied.';
 $string['login_rejected'] = 'Your login was rejected';
+$string['login_using_smartphonee'] = 'Log in using your smartphone';
 $string['login_via_qrcode'] = 'Log in via QR-Code';
 $string['os'] = 'Operating System';
 $string['pluginisdisabled'] = 'The auth_qrcode plugin is disabled.';
