@@ -22,7 +22,7 @@ global $CFG;
 require_once($CFG->dirroot . '/login/lib.php');
 
 use auth_qrcode\db\model\qrcode;
-use auth_qrcode\event\logged_in;
+use auth_qrcode\db\model\qrcode_status;
 use coding_exception;
 use core_external\external_api;
 use core_external\external_function_parameters;
@@ -31,7 +31,7 @@ use core_external\external_value;
 use moodle_exception;
 
 /**
- * Web Service to check if this session has been authorized from another device and log in the user.
+ * Web Service to check the status of the QR login attempt and log in the user if authorized from another device.
  *
  * @package     auth_qrcode
  * @copyright   2026 MoodleMootDACH
@@ -45,63 +45,65 @@ class check_login extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
+            'token' => new external_value(PARAM_ALPHANUM, 'Token'),
             'confirmationcode' => new external_value(PARAM_ALPHANUM, 'Confirmation code', VALUE_DEFAULT),
         ]);
     }
 
     /**
-     * Check if this session has been authorized from another device and log in the user.
+     * Check the status of the QR login attempt.
      *
+     * If this is called from the session trying to log in and the attempt has been authorized on the other device, the session will
+     * automatically be logged in.
+     *
+     * @param string $token
      * @param string|null $confirmationcode
      * @return array
      * @throws coding_exception
      * @throws moodle_exception
      */
-    public static function execute(string|null $confirmationcode): array {
-        global $SESSION, $USER;
+    public static function execute(string $token, string|null $confirmationcode): array {
+        global $USER;
+        $params = self::validate_parameters(
+            self::execute_parameters(),
+            ['token' => $token, 'confirmationcode' => $confirmationcode]
+        );
 
-        $params = self::validate_parameters(self::execute_parameters(), ['confirmationcode' => $confirmationcode]);
+        $qrcode = qrcode::get_by_token($params['token']);
+        if (!$qrcode) {
+            return ['status' => 'token_not_found'];
+        }
 
-        if (isset($SESSION->auth_qrcode_token)) {
-            $canlogin = qrcode::can_user_login($SESSION->auth_qrcode_token, session_id());
-            if (is_object($canlogin)) {
-                // The other session authorized this token to login as the user that was returned.
-                if (qrcode::check_confirmationcode($SESSION->auth_qrcode_token, $params['confirmationcode'])) {
-                    // Confirmation code is valid or not required, proceed with login.
-                    complete_user_login($canlogin, ['auth_qrcode_login' => true]);
-                    $event = logged_in::create([
-                        'userid' => $USER->id,
-                        'objectid' => $USER->id,
-                        'other' => ['token' => $SESSION->auth_qrcode_token],
-                    ]);
-                    $event->trigger();
-                    return [
-                        'status' => 'authorized',
-                        'wantsurl' => \core_login_get_return_url(),
-                    ];
-                } else {
-                    return [
-                        'status' => 'confirmationcode_required',
-                        'remaining_attempts' => qrcode::get_remaining_attempts($SESSION->auth_qrcode_token),
-                        'confirmationcode_length' => qrcode::CONFIRMATIONCODE_LENGTH,
-                    ];
-                }
-            }
-            if ($canlogin === 'waiting') {
-                return [
-                    'status' => 'waiting_auth',
-                ];
-            }
-            if ($canlogin === 'denied') {
-                return [
-                    'status' => 'not_authorized',
-                ];
+        // Check if session/user has access to this token.
+        if (!$qrcode->is_initial_session(session_id()) && intval($USER->id) !== $qrcode->get('userid')) {
+            return ['status' => 'token_not_found'];
+        }
+
+        if ($qrcode->is_login_authorized()) {
+            // The other session authorized this token to login.
+            if ($qrcode->check_confirmationcode($params['confirmationcode'])) {
+                // Confirmation code is valid or not required, proceed with login.
+                $qrcode->perform_login();
             }
         }
 
-        return [
-            'status' => 'token_not_found',
-        ];
+        return match ($qrcode->get('status')) {
+            qrcode_status::ALLOWED => [
+                'status' => 'authorized',
+                'remaining_attempts' => $qrcode->get_remaining_attempts(),
+                'confirmationcode_length' => qrcode::CONFIRMATIONCODE_LENGTH,
+            ],
+            qrcode_status::DENIED => [
+                'status' => 'not_authorized',
+            ],
+            qrcode_status::IN_USE, qrcode_status::CREATED => [
+                'status' => 'waiting_auth',
+            ],
+            qrcode_status::LOGGED_IN => [
+                'status' => 'logged_in',
+                'wantsurl' => core_login_get_return_url(),
+            ],
+        };
     }
 
     /**
