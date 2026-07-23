@@ -16,7 +16,10 @@
 
 namespace auth_qrcode\db\model;
 
+use auth_qrcode\event\logged_in;
+use auth_qrcode\event\login_authorized;
 use core\exception\coding_exception;
+use core\exception\moodle_exception;
 use core\invalid_persistent_exception;
 use core\persistent;
 use dml_exception;
@@ -84,7 +87,7 @@ class qrcode extends persistent {
         $record->set('initial_sessionid', $sessionid);
         $record->set('requester_os', $env['os']);
         $record->set('requester_browser', $env['browser']);
-        $record->set('status', 'created');
+        $record->set('status', qrcode_status::CREATED);
         $record->set('failedattempts', 0);
         $record->set('timecreated', time());
         $record->set('timeexpires', self::calculate_expiry($duration));
@@ -94,115 +97,101 @@ class qrcode extends persistent {
     }
 
     /**
-     * Sets the user ID for a given token and updates status to authorized. Also resets the expiration timer.
+     * Sets the user ID for this login attempt and updates status to authorized. Also resets the expiration timer.
      *
      * @param int $userid
-     * @param string $token
      * @param int|null $duration Optional expiration duration in seconds from now. If not set it defaults to value of
      * auth_qrcode/expirationtime setting.
-     * @return self|null
+     * @return bool true if marked as allowed, or false if wrong state or expired.
      * @throws coding_exception
      * @throws dml_exception
      * @throws invalid_persistent_exception
      * @throws RandomException
      */
-    public static function allow(int $userid, string $token, ?int $duration = null): false|self {
-        $existing = self::get_record([
-            'token' => $token,
-            'status' => 'in_use',
-        ]);
-        if (!$existing) {
+    public function allow(int $userid, ?int $duration = null): bool {
+        if ($this->is_expired() || $this->get('status') !== qrcode_status::IN_USE) {
             return false;
         }
-        if (self::is_record_expired($existing)) {
-            return false;
-        }
-        $existing->set('userid', $userid);
-        $existing->set('status', 'allowed');
+        $this->set('userid', $userid);
+        $this->set('status', qrcode_status::ALLOWED);
         if (get_config('auth_qrcode', 'useconfirmationcode')) {
-            $existing->set('confirmationcode', self::generate_confirmation_code());
-            $existing->set('failedattempts', 0);
+            $this->set('confirmationcode', self::generate_confirmation_code());
+            $this->set('failedattempts', 0);
         }
-        $existing->set('timeexpires', self::calculate_expiry($duration)); // Extend timer.
-        $existing->update();
-        return $existing;
-    }
-
-    /**
-     * Denies a QR code login attempt.
-     *
-     * @param string $token The unique token.
-     * @return bool Whether the QR code login attempt was denied.
-     * @throws coding_exception
-     * @throws invalid_persistent_exception
-     * @throws dml_exception
-     */
-    public static function deny(string $token): bool {
-        $existing = self::get_record([
-            'token' => $token,
+        $this->set('timeexpires', self::calculate_expiry($duration)); // Extend timer.
+        $this->update();
+        $event = login_authorized::create([
+            'userid' => $userid,
+            'objectid' => $userid,
+            'other' => ['token' => $this->get('token')],
         ]);
-        // It's possible to deny allowed login requests waiting for confirmation.
-        if (!$existing || !in_array($existing->get('status'), ['in_use', 'allowed'])) {
-            return false;
-        }
-
-        $existing->set('status', 'denied');
-        $existing->set('timeexpires', self::calculate_expiry(10)); // Set expire to 10 seconds.
-        $existing->update();
+        $event->trigger();
         return true;
     }
 
     /**
-     * Marks a login attempt as in use. Also resets the expiration timer.
+     * Denies this QR code login attempt.
      *
-     * @param string $token The unique token.
+     * @return bool true if marked as denied, or false if wrong state or expired.
+     * @throws coding_exception
+     * @throws invalid_persistent_exception
+     * @throws dml_exception
+     */
+    public function deny(): bool {
+        global $USER;
+        // It's possible to deny allowed login requests waiting for confirmation.
+        if ($this->is_expired() || !in_array($this->get('status'), [qrcode_status::IN_USE, qrcode_status::ALLOWED])) {
+            return false;
+        }
+
+        // Only the user who authorized the login can deny it if it has already been allowed.
+        if ($this->get('status') === qrcode_status::ALLOWED && intval($USER->id) !== $this->get('userid')) {
+            return false;
+        }
+
+        $this->set('status', qrcode_status::DENIED);
+        $this->set('timeexpires', self::calculate_expiry(10)); // Set expire to 10 seconds.
+        $this->update();
+        return true;
+    }
+
+    /**
+     * Marks the login attempt as in use. Also resets the expiration timer.
+     *
      * @param int|null $duration Optional expiration duration in seconds from now. If not set it defaults to value of
      * auth_qrcode/expirationtime setting.
-     * @return bool true if marked as in use, or false if not found or expired.
+     * @return bool true if marked as in use, or false if wrong state or expired.
      * @throws coding_exception
      * @throws dml_exception
      * @throws invalid_persistent_exception
      */
-    public static function set_in_use(string $token, ?int $duration = null): bool {
-        $existing = self::get_record([
-            'token' => $token,
-            'status' => 'created',
-        ]);
-        if (!$existing) {
-            return false;
-        }
-        if (self::is_record_expired($existing)) {
+    public function set_in_use(?int $duration = null): bool {
+        if ($this->is_expired() || $this->get('status') !== qrcode_status::CREATED) {
             return false;
         }
 
-        $existing->set('status', 'in_use');
-        $existing->set('timeexpires', self::calculate_expiry($duration)); // Extend timer.
-        $existing->update();
+        $this->set('status', qrcode_status::IN_USE);
+        $this->set('timeexpires', self::calculate_expiry($duration)); // Extend timer.
+        $this->update();
         return true;
     }
 
     /**
-     * Retrieves information about a login attempt.
+     * Retrieves information about the login attempt.
      *
-     * @param string $token The unique token.
-     * @return array|false Array with ip, os, and browser, or false if not found.
+     * @return array Array with ip, os, and browser.
      * @throws coding_exception
      * @throws dml_exception
      * @throws invalid_persistent_exception
      */
-    public static function get_loginattempt_info(string $token): array|false {
+    public function get_loginattempt_info(): array {
         global $DB;
-        $existing = self::get_record(['token' => $token]);
-        if (!$existing) {
-            return false;
-        }
-
-        $session = $DB->get_record('sessions', ['id' => $existing->get('initial_sessionid')], 'lastip');
+        $session = $DB->get_record('sessions', ['id' => $this->get('initial_sessionid')], 'lastip');
 
         return [
             'ip' => $session ? $session->lastip : 'Unknown',
-            'os' => $existing->get('requester_os'),
-            'browser' => $existing->get('requester_browser'),
+            'os' => $this->get('requester_os'),
+            'browser' => $this->get('requester_browser'),
         ];
     }
 
@@ -210,37 +199,29 @@ class qrcode extends persistent {
      * Check whether the confirmation code that was entered is valid. Increments the failed attempts count if an invalid (non-null)
      * code is passed.
      *
-     * @param string $token
      * @param string|null $confirmationcode
      * @return bool
      * @throws coding_exception
      * @throws dml_exception
      * @throws invalid_persistent_exception
      */
-    public static function check_confirmationcode(string $token, string|null $confirmationcode): bool {
+    public function check_confirmationcode(string|null $confirmationcode): bool {
         if (!get_config('auth_qrcode', 'useconfirmationcode')) {
             return true;
         }
         if (is_null($confirmationcode)) {
             return false;
         }
-        $existing = self::get_record([
-            'token' => $token,
-            'status' => 'allowed',
-        ]);
-        if (!$existing) {
+        if ($this->is_expired() || $this->get('status') !== qrcode_status::ALLOWED) {
             return false;
         }
-        if (self::is_record_expired($existing)) {
-            return false;
-        }
-        $failed = $existing->get('failedattempts');
-        if ($failed >= self::CONFIRMATIONCODE_ATTEMPTS) {
-            return false;
-        }
-        if ($existing->get('confirmationcode') !== $confirmationcode) {
-            $existing->set('failedattempts', $failed + 1);
-            $existing->update();
+        $failed = $this->get('failedattempts');
+        if ($this->get('confirmationcode') !== $confirmationcode) {
+            $this->set('failedattempts', $failed + 1);
+            if ($failed + 1 >= self::CONFIRMATIONCODE_ATTEMPTS) {
+                $this->set('status', qrcode_status::DENIED);
+            }
+            $this->update();
             return false;
         }
         return true;
@@ -249,56 +230,81 @@ class qrcode extends persistent {
     /**
      * Get the remaining number of attempts for a QR code confirmation code.
      *
-     * @param string $token
-     * @return int|false Remaining number of attempts or false if the record does not exist or is expired.
+     * This does not check the state of the QR login attempt.
+     *
+     * @return int Remaining number of attempts.
      * @throws coding_exception
      * @throws dml_exception
      */
-    public static function get_remaining_attempts(string $token): int|false {
-        if (!get_config('auth_qrcode', 'useconfirmationcode')) {
-            return false;
-        }
-        $existing = self::get_record([
-            'token' => $token,
-            'status' => 'allowed',
-        ]);
-        if (!$existing) {
-            return false;
-        }
-        if (self::is_record_expired($existing)) {
-            return false;
-        }
-        $failed = $existing->get('failedattempts');
+    public function get_remaining_attempts(): int {
+        $failed = $this->get('failedattempts');
         return max(0, self::CONFIRMATIONCODE_ATTEMPTS - $failed);
     }
 
     /**
-     * Checks if a user is allowed to login based on the QR code token and session.
+     * Checks if login has been authorized.
      *
-     * @param string $token The unique token.
-     * @param string $sid The session ID string.
-     * @return string|stdClass 'waiting', 'denied', 'expired' or the user object.
+     * @return bool Whether login is allowed.
      * @throws coding_exception
      * @throws dml_exception
      */
-    public static function can_user_login(string $token, string $sid): string|stdClass {
+    public function is_login_authorized(): bool {
+        if ($this->is_expired()) {
+            return false;
+        }
+        return $this->get('status') === qrcode_status::ALLOWED;
+    }
+
+    /**
+     * Checks if this is the initial session.
+     *
+     * @param string $sid The session ID string.
+     * @return bool
+     * @throws \coding_exception
+     * @throws dml_exception
+     */
+    public function is_initial_session(string $sid): bool {
         $sessionid = self::get_session_id($sid);
         if ($sessionid === null) { // Check like this because sessionid could be 0 (zero).
-            return 'expired';
+            return false;
         }
-        $existing = self::get_record([
-            'token' => $token,
-            'initial_sessionid' => $sessionid,
+        return $this->get('initial_sessionid') === $sessionid;
+    }
+
+    /**
+     * Completes the login for the current session.
+     *
+     * This checks whether the login attempt has been authorized, but it does NOT check whether the correct confirmation code has
+     * been provided.
+     *
+     * @throws moodle_exception
+     * @throws coding_exception
+     */
+    public function perform_login(): bool {
+        if (!$this->is_login_authorized() || !$this->is_initial_session(session_id())) {
+            return false;
+        }
+        $user = $this->get_user_record();
+        if (!$user) {
+            return false;
+        }
+
+        // Perform login.
+        complete_user_login($user, ['auth_qrcode_login' => true]);
+
+        // Update record.
+        $this->set('status', qrcode_status::LOGGED_IN);
+        $this->set('timeexpires', self::calculate_expiry(10)); // Set expire to 10 seconds.
+        $this->update();
+
+        // Trigger event.
+        $event = logged_in::create([
+            'userid' => $user->id,
+            'objectid' => $user->id,
+            'other' => ['token' => $this->get('token')],
         ]);
-        if (!$existing || self::is_record_expired($existing)) {
-            return 'expired';
-        }
-        return match ($existing->get('status')) {
-            'allowed' => $existing->get_user_record(),
-            'created', 'in_use' => 'waiting',
-            'denied' => 'denied',
-            default => 'expired',
-        };
+        $event->trigger();
+        return true;
     }
 
     /**
@@ -315,7 +321,36 @@ class qrcode extends persistent {
         if (!$userid) {
             return null;
         }
-        return $DB->get_record('user', ['id' => $userid]);
+        return $DB->get_record('user', ['id' => $userid]) ?: null;
+    }
+
+    /**
+     * Checks if this record is expired and deletes it if so.
+     *
+     * @return bool True if expired, false otherwise.
+     * @throws coding_exception
+     */
+    public function is_expired(): bool {
+        if ($this->get('timeexpires') < time()) {
+            $this->delete();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Find a QR login attempt by token.
+     *
+     * @param string $token The token to search for.
+     * @return qrcode|null QR login attempt or null if not found or expired.
+     * @throws coding_exception
+     */
+    public static function get_by_token(string $token): ?qrcode {
+        $record = self::get_record(['token' => $token]);
+        if (!$record || $record->is_expired()) {
+            return null;
+        }
+        return $record;
     }
 
     /**
@@ -372,21 +407,6 @@ class qrcode extends persistent {
     }
 
     /**
-     * Checks if a record is expired and deletes it if so.
-     *
-     * @param self $record The record to check.
-     * @return bool True if expired, false otherwise.
-     * @throws coding_exception
-     */
-    private static function is_record_expired(self $record): bool {
-        if ($record->get('timeexpires') < time()) {
-            $record->delete();
-            return true;
-        }
-        return false;
-    }
-
-    /**
      * Detects the OS and Browser from a User Agent string.
      *
      * This avoids affecting the global core_useragent singleton.
@@ -427,11 +447,32 @@ class qrcode extends persistent {
     }
 
     /**
+     * Internal getter for status.
+     *
+     * @return qrcode_status
+     * @throws coding_exception
+     */
+    protected function get_status(): qrcode_status {
+        return qrcode_status::from($this->raw_get('status'));
+    }
+
+    /**
+     * Internal setter for status.
+     *
+     * @param qrcode_status $status
+     * @return self
+     * @throws coding_exception
+     */
+    protected function set_status(qrcode_status $status): self {
+        return $this->raw_set('status', $status->value);
+    }
+
+    /**
      * {@inheritDoc}
      */
     protected static function define_properties(): array {
         return [
-            'token' => ['type' => PARAM_ALPHANUMEXT],
+            'token' => ['type' => PARAM_ALPHANUM],
             'initial_sessionid' => ['type' => PARAM_INT],
             'status' => ['type' => PARAM_ALPHAEXT],
             'userid' => ['type' => PARAM_INT, 'null' => NULL_ALLOWED, 'default' => null],
