@@ -44,13 +44,10 @@ class token_creator {
      * @throws coding_exception
      */
     public static function create(): string {
-        global $SESSION;
-
         // Each random byte will be mapped into a number between 0 and 61, that means an entropy of 62.
         // Therefore, a length of 34 will provide a security of log(62, 2) * 34 ~ 202 bits.
         $token = random_string(34);
         if (db\model\qrcode::create_record($token, session_id())) {
-            $SESSION->auth_qrcode_token = $token;
             return $token;
         }
         throw new coding_exception('Could not create token');

@@ -1,15 +1,20 @@
 /**
- * Periodically checks the status of the QR code authentication.
+ * Periodic check for the status of the QR code authentication on the login page.
  *
- * @module     auth_qrcode/check
- * @copyright  2025 Your Name <you@example.com>
+ * @module     auth_qrcode/login
+ * @copyright  2026 MoodleMootDACH
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import Ajax from 'core/ajax';
 import ConfirmationCodeInputModal from 'auth_qrcode/confirmationcode_input_modal';
-import * as ModalEvents from 'core/modal_events';
 import {get_string as getString} from 'core/str';
+
+/**
+ * Login atttempt token.
+ * @type {String}
+ */
+let token;
 
 /**
  * Interval ID.
@@ -36,9 +41,11 @@ let remainingAttempts;
 let confirmationCodeModal;
 
 /**
- * Setup the periodic check of the QR code authentication status.
+ * Set up the periodic check of the QR code authentication status.
+ * @param {String} _token
  */
-export function init() {
+export function init(_token) {
+    token = _token;
     checkInterval = setInterval(checkNow, 2000);
 }
 
@@ -50,25 +57,21 @@ async function checkNow(confirmationcode = null) {
     const check = await Ajax.call([{
         methodname: 'auth_qrcode_check_login',
         args: {
+            token: token,
             confirmationcode: confirmationcode
         }
     }])[0];
-    if (check.status === 'authorized') {
+    if (check.status === 'logged_in') {
         // Login has been completed, redirect the user.
         clearInterval(checkInterval);
         window.location.href = check.wantsurl;
         return true;
     }
-    if (check.status === 'confirmationcode_required') {
+    if (check.status === 'authorized') {
         // Wrong confirmation code (or none entered). Prompt the user.
         confirmationCodeLength = check.confirmationcode_length;
         remainingAttempts = check.remaining_attempts;
-        if (remainingAttempts > 0) {
-            await showConfirmationCodeModal();
-        } else {
-            // No more attempts left.
-            showRejected();
-        }
+        await showConfirmationCodeModal();
     } else if (check.status === 'not_authorized') {
         // Login attempt rejected on smartphone.
         showRejected();
@@ -103,11 +106,6 @@ async function showConfirmationCodeModal() {
             return getString('invalidconfirmationcode', 'auth_qrcode', remainingAttempts);
         }
         return null;
-    });
-
-    // Show rejection message if modal is closed (the login is not actually rejected, but without the modal it cannot be completed).
-    confirmationCodeModal.getRoot().on(ModalEvents.cancel, () => {
-        showRejected();
     });
 }
 

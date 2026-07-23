@@ -53,7 +53,6 @@ export default class ConfirmationCodeInputModal extends Modal {
         });
 
         super.registerEventListeners();
-        this.registerCloseOnCancel();
 
         // Prevent clicking outside the modal from closing it.
         this.getRoot().on(ModalEvents.outsideClick, e => {
