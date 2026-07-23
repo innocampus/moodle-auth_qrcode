@@ -35,7 +35,7 @@ class logged_in extends \core\event\base {
      * @throws coding_exception
      */
     public static function get_name(): string {
-        return get_string('userauthenticated', 'auth_qrlocal_mosescode');
+        return get_string('userauthenticated', 'auth_qrcode');
     }
 
     /**
