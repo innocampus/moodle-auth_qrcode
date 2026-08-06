@@ -74,6 +74,9 @@ class qrcode extends persistent {
             return false;
         }
 
+        // Deny other open login attempts for this session.
+        self::deny_all($sid);
+
         $ua = $useragent ?? \core_useragent::get_user_agent_string() ?: '';
         $env = self::detect_environment($ua);
 
@@ -135,7 +138,7 @@ class qrcode extends persistent {
     public function deny(): bool {
         global $USER;
         // It's possible to deny allowed login requests waiting for confirmation.
-        if ($this->is_expired() || !in_array($this->get('status'), [qrcode_status::IN_USE, qrcode_status::ALLOWED])) {
+        if ($this->is_expired() || in_array($this->get('status'), [qrcode_status::DENIED, qrcode_status::LOGGED_IN])) {
             return false;
         }
 
@@ -145,7 +148,7 @@ class qrcode extends persistent {
         }
 
         $this->set('status', qrcode_status::DENIED);
-        $this->set('timeexpires', self::calculate_expiry(10)); // Set expire to 10 seconds.
+        $this->set('timeexpires', self::calculate_expiry(10)); // Give other tabs time to poll the new status.
         $this->update();
         return true;
     }
@@ -284,7 +287,7 @@ class qrcode extends persistent {
 
         // Update record.
         $this->set('status', qrcode_status::LOGGED_IN);
-        $this->set('timeexpires', self::calculate_expiry(10)); // Set expire to 10 seconds.
+        $this->set('timeexpires', self::calculate_expiry(10)); // Give other tabs time to poll the new status.
         $this->update();
 
         // Trigger event.
@@ -341,6 +344,33 @@ class qrcode extends persistent {
             return null;
         }
         return $record;
+    }
+
+    /**
+     * Deny all existing open login attempts for the given session.
+     *
+     * @param string $sid
+     * @throws coding_exception
+     * @throws dml_exception
+     */
+    public static function deny_all(string $sid): void {
+        global $DB;
+        $closedstates = [qrcode_status::LOGGED_IN->value, qrcode_status::DENIED->value];
+        [$notinsql, $notinparams] = $DB->get_in_or_equal($closedstates, SQL_PARAMS_NAMED, equal: false);
+        $table = self::TABLE;
+        $sql = "
+            UPDATE {{$table}}
+               SET status = :denied, timeexpires = :timeexpires
+             WHERE initialsessionid = :sid
+                   AND status $notinsql
+                   AND timeexpires > :time";
+        $params = array_merge([
+            'denied' => qrcode_status::DENIED->value,
+            'sid' => $sid,
+            'time' => time(),
+            'timeexpires' => time() + 10, // Give other tabs time to poll the new status.
+        ], $notinparams);
+        $DB->execute($sql, $params);
     }
 
     /**

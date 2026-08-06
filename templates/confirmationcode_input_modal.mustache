@@ -35,4 +35,7 @@
             <div id="confirmationcode-error" class="text-danger mt-3 hidden" role="alert"></div>
         </div>
     {{/body}}
+    {{$footer}}
+        <a href="{{config.wwwroot}}/auth/qrcode/login.php" class="btn btn-secondary">{{#str}}get_new_qrcode, auth_qrcode{{/str}}</a>
+    {{/footer}}
 {{/ core/modal }}

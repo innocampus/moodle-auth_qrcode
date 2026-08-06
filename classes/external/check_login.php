@@ -75,7 +75,11 @@ class check_login extends external_api {
         }
 
         // Check if session/user has access to this token.
-        if (!$qrcode->is_initial_session(session_id()) && intval($USER->id) !== $qrcode->get('userid')) {
+        // Only the session that created the QR code and the user that is logging in should be able to access this endpoint.
+        $isinitialsession = $qrcode->is_initial_session(session_id());
+        $isuserloggingin = intval($USER->id) === $qrcode->get('userid');
+        $hasaccess = $isinitialsession || $isuserloggingin;
+        if (!$hasaccess) {
             return ['status' => 'token_not_found'];
         }
 

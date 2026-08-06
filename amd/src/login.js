@@ -71,7 +71,7 @@ async function checkNow(confirmationcode = null) {
         // Wrong confirmation code (or none entered). Prompt the user.
         confirmationCodeLength = check.confirmationcode_length;
         remainingAttempts = check.remaining_attempts;
-        await showConfirmationCodeModal();
+        await ensureConfirmationCodeModal();
     } else if (check.status === 'not_authorized') {
         // Login attempt rejected on smartphone.
         showRejected();
@@ -83,9 +83,9 @@ async function checkNow(confirmationcode = null) {
 }
 
 /**
- * Initialize and show the modal to enter the confirmation code.
+ * Initialize and show the modal to enter the confirmation code if it has not already been shown.
  */
-async function showConfirmationCodeModal() {
+async function ensureConfirmationCodeModal() {
     if (confirmationCodeModal) {
         // This modal cannot be reopened after being hidden.
         return;
