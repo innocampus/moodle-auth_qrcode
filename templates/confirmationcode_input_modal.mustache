@@ -36,6 +36,6 @@
         </div>
     {{/body}}
     {{$footer}}
-        <button type="button" class="btn btn-secondary" data-action="cancel">{{#str}}cancel_login, auth_qrcode{{/str}}</button>
+        <a href="{{config.wwwroot}}/auth/qrcode/login.php" class="btn btn-secondary">{{#str}}get_new_qrcode, auth_qrcode{{/str}}</a>
     {{/footer}}
 {{/ core/modal }}

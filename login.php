@@ -53,16 +53,17 @@ $PAGE->set_heading(get_string('pluginname', 'auth_qrcode'));
 echo $OUTPUT->header();
 $logo = $OUTPUT->get_logo_url();
 if ($logo) {
-    echo $OUTPUT->render_from_template("auth_qrcode/logo", ["logo_url" => $logo, "site_fullname" => $SITE->fullname]);
+    echo $OUTPUT->render_from_template('auth_qrcode/logo', ['logo_url' => $logo, 'site_fullname' => $SITE->fullname]);
 }
 
 // QR-Code.
-$url = new moodle_url('/auth/qrcode/confirm.php', ["token" => token_creator::create()]);
+$token = token_creator::create();
+$url = new moodle_url('/auth/qrcode/confirm.php', ['token' => $token]);
 $data = [
-    "qrcode_data" => qrcode_generator::generate_qrcode_data($url),
+    'qrcode_data' => qrcode_generator::generate_qrcode_data($url),
 ];
-echo $OUTPUT->render_from_template("auth_qrcode/login", $data);
+echo $OUTPUT->render_from_template('auth_qrcode/login', $data);
 
-$PAGE->requires->js_call_amd('auth_qrcode/check', 'init');
+$PAGE->requires->js_call_amd('auth_qrcode/login', 'init', [$token]);
 
 echo $OUTPUT->footer();

@@ -24,6 +24,9 @@
  * {@noinspection PhpUnhandledExceptionInspection}
  */
 
+use auth_qrcode\db\model\qrcode;
+use auth_qrcode\db\model\qrcode_status;
+
 require_once(__DIR__ . '/../../config.php');
 
 global $PAGE, $OUTPUT, $USER, $SITE;
@@ -47,9 +50,9 @@ require_login(autologinguest: false);
 echo $OUTPUT->header();
 
 // Check if the token is valid.
-$tokeninfo = \auth_qrcode\db\model\qrcode::get_loginattempt_info($token);
-if (!$tokeninfo) {
-    echo $OUTPUT->notification(get_string('invalid_token', 'auth_qrcode'), 'danger', false);
+$qrcode = qrcode::get_by_token($token);
+if (!$qrcode) {
+    echo $OUTPUT->notification(get_string('invalid_token_or_expired', 'auth_qrcode'), 'danger', false);
     echo $OUTPUT->footer();
     exit;
 }
@@ -65,8 +68,12 @@ if ($USER->auth == 'nologin' || !is_enabled_auth($USER->auth)) {
 // Check if the token should be denied.
 if (optional_param('deny', false, PARAM_BOOL)) {
     require_sesskey();
-    \auth_qrcode\db\model\qrcode::deny($token);
-    echo $OUTPUT->notification(get_string('login_cancelled', 'auth_qrcode'), 'info', false);
+    $success = $qrcode->deny();
+    if ($success || $qrcode->get('status') === qrcode_status::DENIED) {
+        echo $OUTPUT->notification(get_string('login_denied', 'auth_qrcode'), 'info', false);
+    } else {
+        echo $OUTPUT->notification(get_string('expired_or_rejected', 'auth_qrcode'), 'error', false);
+    }
     echo $OUTPUT->footer();
     exit;
 }
@@ -74,17 +81,12 @@ if (optional_param('deny', false, PARAM_BOOL)) {
 // Check if the token should be allowed.
 if (optional_param('allow', false, PARAM_BOOL)) {
     require_sesskey();
-    $isallowed = \auth_qrcode\db\model\qrcode::allow($USER->id, $token);
-    if (is_object($isallowed)) {
-        $event = \auth_qrcode\event\login_authorized::create([
-            "userid" => $USER->id,
-            "objectid" => $USER->id,
-            "other" => ['token' => $token],
-        ]);
-        $event->trigger();
-        $confirmationcode = $isallowed->get('confirmationcode');
+    $success = $qrcode->allow($USER->id);
+    if ($success) {
+        $confirmationcode = $qrcode->get('confirmationcode');
         if ($confirmationcode) {
             // Render page with confirmation code.
+            $PAGE->requires->js_call_amd('auth_qrcode/confirm', 'init', [$token]);
             $context = [
                 'confirmationcode' => $confirmationcode,
                 'sesskey' => sesskey(),
@@ -100,17 +102,25 @@ if (optional_param('allow', false, PARAM_BOOL)) {
     exit;
 }
 
+// Show login successful message.
+if (intval($USER->id) === $qrcode->get('userid') && $qrcode->get('status') === qrcode_status::LOGGED_IN) {
+    echo $OUTPUT->notification(get_string('login_successful', 'auth_qrcode'), 'success', false);
+    echo $OUTPUT->footer();
+    exit;
+}
+
 // Mark the token as in use.
-$success = \auth_qrcode\db\model\qrcode::set_in_use($token);
+$success = $qrcode->set_in_use();
 if (!$success) {
     echo $OUTPUT->notification(get_string('expired_or_rejected', 'auth_qrcode'), 'danger', false);
     echo $OUTPUT->footer();
     exit;
 }
 
-// Add additional template context.
+// Render confirmation page.
+$tokeninfo = $qrcode->get_loginattempt_info();
 $tokeninfo['sesskey'] = sesskey();
 $tokeninfo['sitename'] = format_string($SITE->shortname);
-
 echo $OUTPUT->render_from_template('auth_qrcode/confirmation', $tokeninfo);
+
 echo $OUTPUT->footer();
