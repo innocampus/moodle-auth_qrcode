@@ -7,7 +7,6 @@
  */
 
 import Modal from 'core/modal';
-import * as ModalRegistry from 'core/modal_registry';
 import * as ModalEvents from 'core/modal_events';
 import * as KeyCodes from 'core/key_codes';
 import Notification from 'core/notification';
@@ -124,4 +123,3 @@ export default class ConfirmationCodeInputModal extends Modal {
     }
 }
 
-ModalRegistry.register(ConfirmationCodeInputModal.TYPE, ConfirmationCodeInputModal, ConfirmationCodeInputModal.TEMPLATE);
